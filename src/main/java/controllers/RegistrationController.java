@@ -1,8 +1,10 @@
 package controllers;
 
-import soap_services.geoIPservice.webservicex.GeoIP;
-import soap_services.geoIPservice.webservicex.GeoIPService;
-import soap_services.geoIPservice.webservicex.GeoIPServiceSoap;
+import soap_services.countryDetails.webservicex.Country;
+import soap_services.countryDetails.webservicex.CountrySoap;
+import soap_services.geoIP.webservicex.GeoIP;
+import soap_services.geoIP.webservicex.GeoIPService;
+import soap_services.geoIP.webservicex.GeoIPServiceSoap;
 
 import static jsonUtil.JsonUtil.json;
 import static spark.Spark.get;
@@ -17,18 +19,33 @@ public class RegistrationController
 
         get("/currency", (req, res) ->
         {
-            GeoIPService service = new GeoIPService();
-            GeoIPServiceSoap temp = service.getGeoIPServiceSoap();
-            String ip = req.ip();
-            System.out.println(ip);
-            GeoIP result = temp.getGeoIP(ip);
+            GeoIP ipResult = null;
+            String countries;
+            String[] currency;
+            String[] result;
+            try
+            {
+                GeoIPService ipService = new GeoIPService();
+                GeoIPServiceSoap ipInterface = ipService.getGeoIPServiceSoap();
+                Country countryService = new Country();
+                CountrySoap countryInterface = countryService.getCountrySoap();
 
-            if (result != null ){
-                res.status(200);
-                return result.getCountryCode();
+                String ip = req.ip();
+                System.out.println(ip);
+                ipResult = ipInterface.getGeoIP(ip);
+                System.out.println(ipResult.getCountryName());
+                countries = countryInterface.getCurrencyByCountry(ipResult.getCountryName());
+                currency = countries.split("<CurrencyCode>",3);
+                result = currency[1].split("</CurrencyCode>",3);
+                if (result[0].length() > 0) return result[0];
+            }catch (Exception e)
+            {
+                res.status(400);
+                return new String ("Unable to access GeoIpService");
             }
+
             res.status(400);
-            return new String ("Unable to access GeoIpService");
+            return new String ("Unable to get a respons from GeoIpService");
         }, json());
     }
 
